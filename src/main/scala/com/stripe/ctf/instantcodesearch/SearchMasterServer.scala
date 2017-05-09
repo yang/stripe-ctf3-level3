@@ -1,8 +1,9 @@
 package com.stripe.ctf.instantcodesearch
 
 import com.twitter.util.Future
-import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import org.jboss.netty.handler.codec.http.{HttpVersion, DefaultHttpResponse, HttpResponseStatus}
 import org.jboss.netty.util.CharsetUtil.UTF_8
+import org.jboss.netty.buffer.ChannelBuffers._
 
 class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, id) {
   val NumNodes = 3
@@ -57,13 +58,28 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
     System.err.println(
       "[master] Requesting " + NumNodes + " nodes to index path: " + path
     )
+    //Future.collect(List(clients(0).index(path))).map(_ => successResponse())
 
     val responses = Future.collect(clients.map {client => client.index(path)})
     responses.map {_ => successResponse()}
   }
 
   override def query(q: String) = {
+    //clients(0).query(q)
     val responses = clients.map {client => client.query(q)}
-    responses(0)
+    def extract(s: String) = {
+      val t = s.substring(0, "{\"success\": true,\n \"results\": [".length)
+      t.substring(t.length - 2)
+    } // + resultString + "}"
+    for (rs <- Future.collect(responses)) yield {
+      val matchLists = for (r <- rs) yield extract(r.getContent.toString(UTF_8))
+      val response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
+      val resultString = matchLists.mkString("[", ",\n", "]")
+      val content = "{\"success\": true,\n \"results\": " + resultString + "}"
+      response.setContent(copiedBuffer(content, UTF_8))
+      response
+    }
+//    Future.collect(responses).map(rs => for (r <- rs) yield )
+    //responses(0)
   }
 }

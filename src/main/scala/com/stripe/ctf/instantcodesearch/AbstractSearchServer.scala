@@ -61,7 +61,7 @@ abstract class AbstractSearchServer(port: Int, id: Int) extends TwitterServer {
     httpResponse(content, HttpResponseStatus.OK)
   }
 
-  def querySuccessResponse(results: List[Match]): HttpResponse = {
+  def querySuccessResponse(results: Iterable[Match]): HttpResponse = {
     val response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
     val resultString = results
       .map {r => "\"" + r.path + ":" + r.line + "\""}

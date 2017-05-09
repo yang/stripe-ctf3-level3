@@ -1,3 +1,4 @@
+from cPickle import dump, load
 import os.path
 import subprocess
 import time
@@ -132,6 +133,12 @@ class Runner(test_framework.AbstractRunner):
                 responses.append([parsed['results'], code])
             except:
                 raise error.StripeError('The search for %s returned invalid JSON: %s' % (key, body))
+        save = False
+        check = True
+        if save:
+          dump((keys, responses), open('/tmp/test.pickle', 'wb'), 2)
+        if check:
+          assert keys, responses == load(open('/tmp/test.pickle','rb'))
 
         end_time = time.time()
 
